@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}服装列表 - 服装管理平台{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tshirt me-2"></i>服装列表
+        </h1>
+    </div>
+</div>
+
+<!-- 搜索和筛选 -->
+<div class="search-filters">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="q" class="form-label">搜索</label>
+            <input type="text" class="form-control" id="q" name="q" value="{{ request.GET.q }}" placeholder="搜索服装名称、款式号...">
+        </div>
+        <div class="col-md-2">
+            <label for="category" class="form-label">分类</label>
+            <select class="form-select" id="category" name="category">
+                <option value="">所有分类</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="gender" class="form-label">性别</label>
+            <select class="form-select" id="gender" name="gender">
+                <option value="">所有性别</option>
+                <option value="M" {% if request.GET.gender == 'M' %}selected{% endif %}>男装</option>
+                <option value="F" {% if request.GET.gender == 'F' %}selected{% endif %}>女装</option>
+                <option value="U" {% if request.GET.gender == 'U' %}selected{% endif %}>中性</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="season" class="form-label">季节</label>
+            <select class="form-select" id="season" name="season">
+                <option value="">所有季节</option>
+                {% for season in seasons %}
+                    <option value="{{ season.id }}" {% if request.GET.season == season.id|stringformat:"s" %}selected{% endif %}>
+                        {{ season.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="color" class="form-label">颜色</label>
+            <input type="text" class="form-control" id="color" name="color" value="{{ request.GET.color }}" placeholder="颜色">
+        </div>
+        <div class="col-md-1">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 服装网格 -->
+<div class="row">
+    {% for clothing in clothes %}
+    <div class="col-md-4 col-lg-3 mb-4">
+        <div class="card h-100 shadow-sm">
+            {% if clothing.main_image %}
+                <img src="{{ clothing.main_image.url }}" class="card-img-top" alt="{{ clothing.name }}">
+            {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center">
+                    <i class="fas fa-tshirt fa-3x text-muted"></i>
+                </div>
+            {% endif %}
+            
+            <div class="card-body">
+                <h6 class="card-title">{{ clothing.name }}</h6>
+                <p class="card-text text-muted small mb-2">
+                    <strong>款式号:</strong> {{ clothing.style_number }}
+                </p>
+                <p class="card-text text-muted small mb-2">
+                    <strong>设计师:</strong> {{ clothing.designer_name }}
+                </p>
+                <p class="card-text text-muted small mb-2">
+                    <strong>分类:</strong> {{ clothing.category_name|default:"未分类" }}
+                </p>
+                <p class="card-text text-muted small mb-2">
+                    <strong>季节:</strong> {{ clothing.season_name|default:"未设置" }}
+                </p>
+                <p class="card-text text-muted small mb-2">
+                    <strong>颜色:</strong> {{ clothing.color }}
+                </p>
+                
+                <!-- 标签 -->
+                {% if clothing.tags %}
+                <div class="mb-2">
+                    {% for tag in clothing.tags %}
+                    <span class="tag" style="background-color: {{ tag.color }};">
+                        {{ tag.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- 状态标签 -->
+                <div class="mb-2">
+                    {% if clothing.status == 'published' %}
+                        <span class="badge bg-success">已发布</span>
+                    {% elif clothing.status == 'draft' %}
+                        <span class="badge bg-warning">草稿</span>
+                    {% else %}
+                        <span class="badge bg-secondary">已归档</span>
+                    {% endif %}
+                    
+                    {% if clothing.is_public %}
+                        <span class="badge bg-info">公开</span>
+                    {% else %}
+                        <span class="badge bg-dark">私有</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-footer bg-transparent">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ clothing.created_at|date:"Y-m-d" }}
+                    </small>
+                    <a href="{% url 'clothes:clothing_detail' clothing.id %}" class="btn btn-sm btn-outline-primary">
+                        查看详情
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-tshirt fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">暂无服装数据</h4>
+            <p class="text-muted">请添加一些服装或调整搜索条件</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 分页 -->
+{% if is_paginated %}
+<nav aria-label="服装分页">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.gender %}&gender={{ request.GET.gender }}{% endif %}{% if request.GET.season %}&season={{ request.GET.season }}{% endif %}{% if request.GET.color %}&color={{ request.GET.color }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.gender %}&gender={{ request.GET.gender }}{% endif %}{% if request.GET.season %}&season={{ request.GET.season }}{% endif %}{% if request.GET.color %}&color={{ request.GET.color }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.gender %}&gender={{ request.GET.gender }}{% endif %}{% if request.GET.season %}&season={{ request.GET.season }}{% endif %}{% if request.GET.color %}&color={{ request.GET.color }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.gender %}&gender={{ request.GET.gender }}{% endif %}{% if request.GET.season %}&season={{ request.GET.season }}{% endif %}{% if request.GET.color %}&color={{ request.GET.color }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.gender %}&gender={{ request.GET.gender }}{% endif %}{% if request.GET.season %}&season={{ request.GET.season }}{% endif %}{% if request.GET.color %}&color={{ request.GET.color }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

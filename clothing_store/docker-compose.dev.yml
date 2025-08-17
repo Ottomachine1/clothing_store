@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=clothing_store_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+    ports:
+      - "5432:5432"
+    networks:
+      - clothing_network
+    restart: unless-stopped
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - clothing_network
+    restart: unless-stopped
+
+  # Django应用（开发模式）
+  web:
+    build: .
+    volumes:
+      - .:/app
+      - media_files:/app/media
+      - static_files:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/clothing_store_dev
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - clothing_network
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  postgres_data:
+  media_files:
+  static_files:
+
+networks:
+  clothing_network:
+    driver: bridge
